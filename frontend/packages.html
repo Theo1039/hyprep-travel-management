@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Browse Packages — Travel Manager</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="nav"></div>
+
+<div class="container">
+  <h1 class="page-title">Browse Travel Packages</h1>
+  <p class="page-sub">Search by destination or package name, then book your trip.</p>
+
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search e.g. Zanzibar, Dubai..." />
+    <button class="btn" onclick="loadPackages()">Search</button>
+  </div>
+
+  <div id="errorBox"></div>
+  <div class="grid" id="packagesGrid">Loading packages...</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/common.js"></script>
+<script>
+let session = null;
+
+async function loadPackages() {
+  const grid = document.getElementById('packagesGrid');
+  const errorBox = document.getElementById('errorBox');
+  grid.innerHTML = 'Loading packages...';
+  errorBox.innerHTML = '';
+
+  const search = document.getElementById('searchInput').value.trim();
+  try {
+    const { packages } = await apiFetch(`/packages${search ? `?search=${encodeURIComponent(search)}` : ''}`, session);
+    if (!packages.length) {
+      grid.innerHTML = '<p>No packages found.</p>';
+      return;
+    }
+    grid.innerHTML = packages.map(p => `
+      <div class="card">
+        <div class="card-img">${p.image_url ? `<img src="${p.image_url}" style="width:100%;height:100%;object-fit:cover;">` : '&#127757;'}</div>
+        <div class="card-body">
+          <div class="card-title">${p.name}</div>
+          <div class="card-dest">&#128205; ${p.destination} &middot; ${p.duration_days} days</div>
+          <div class="card-price">$${Number(p.price).toLocaleString()}</div>
+          <a href="package-detail.html?id=${p.id}"><button class="btn" style="width:100%;margin-top:8px;">View &amp; Book</button></a>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    showMessage(errorBox, err.message);
+  }
+}
+
+document.getElementById('searchInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') loadPackages();
+});
+
+(async () => {
+  const result = await renderNav('packages');
+  if (!result) return;
+  session = result.session;
+  loadPackages();
+})();
+</script>
+</body>
+</html>

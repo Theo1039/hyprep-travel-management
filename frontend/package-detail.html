@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Package Details — Travel Manager</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div id="nav"></div>
+
+<div class="container">
+  <a href="packages.html">&larr; Back to packages</a>
+  <div class="detail-grid" style="margin-top:16px;">
+
+    <div class="detail-card" id="packageInfo">Loading...</div>
+
+    <div class="form-card">
+      <h3 style="margin-top:0;">Book This Trip</h3>
+      <form id="bookingForm">
+        <div class="field">
+          <label>Traveler Full Name</label>
+          <input type="text" id="traveler_name" required />
+        </div>
+        <div class="field">
+          <label>Number of Travelers</label>
+          <input type="number" id="number_of_travelers" min="1" value="1" required />
+        </div>
+        <div class="field">
+          <label>Travel Date</label>
+          <input type="date" id="travel_date" required />
+        </div>
+        <div class="field">
+          <label>Payment Proof (JPG, PNG, or PDF &mdash; max 2MB)</label>
+          <input type="file" id="payment_proof" accept=".jpg,.jpeg,.png,.pdf" />
+        </div>
+        <div id="bookingMessage"></div>
+        <button type="submit" class="btn" style="margin-top:10px;" id="submitBtn">Confirm Booking</button>
+      </form>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script src="js/common.js"></script>
+<script>
+let session = null;
+const packageId = new URLSearchParams(window.location.search).get('id');
+
+async function loadPackage() {
+  const infoBox = document.getElementById('packageInfo');
+  try {
+    const { package: p } = await apiFetch(`/packages/${packageId}`, session);
+    infoBox.innerHTML = `
+      <div class="card-img" style="height:200px;border-radius:10px;margin-bottom:14px;">
+        ${p.image_url ? `<img src="${p.image_url}" style="width:100%;height:100%;object-fit:cover;border-radius:10px;">` : '&#127757;'}
+      </div>
+      <h2 style="margin:0 0 6px;">${p.name}</h2>
+      <p class="card-dest">&#128205; ${p.destination} &middot; ${p.duration_days} days</p>
+      <p>${p.description || ''}</p>
+      <p class="card-price" style="font-size:1.3rem;">$${Number(p.price).toLocaleString()} <span style="font-weight:400;color:#5b6477;font-size:.9rem;">/ person</span></p>
+    `;
+  } catch (err) {
+    infoBox.innerHTML = `<div class="message error">${err.message}</div>`;
+  }
+}
+
+document.getElementById('bookingForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = document.getElementById('bookingMessage');
+  const submitBtn = document.getElementById('submitBtn');
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Submitting...';
+
+  try {
+    let payment_proof_url = null;
+    const fileInput = document.getElementById('payment_proof');
+    if (fileInput.files[0]) {
+      if (fileInput.files[0].size > 2 * 1024 * 1024) {
+        throw new Error('File must be 2MB or smaller');
+      }
+      const uploadResult = await uploadFile(fileInput.files[0], session);
+      payment_proof_url = uploadResult.url;
+    }
+
+    const payload = {
+      package_id: packageId,
+      traveler_name: document.getElementById('traveler_name').value,
+      number_of_travelers: document.getElementById('number_of_travelers').value,
+      travel_date: document.getElementById('travel_date').value,
+      payment_proof_url
+    };
+
+    await apiFetch('/bookings', session, { method: 'POST', body: JSON.stringify(payload) });
+
+    showMessage(msg, 'Booking submitted successfully! Redirecting to My Bookings...', 'success');
+    setTimeout(() => window.location.href = 'bookings.html', 1200);
+  } catch (err) {
+    showMessage(msg, err.message);
+  } finally {
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Confirm Booking';
+  }
+});
+
+(async () => {
+  if (!packageId) { window.location.href = 'packages.html'; return; }
+  const result = await renderNav('packages');
+  if (!result) return;
+  session = result.session;
+  loadPackage();
+})();
+</script>
+</body>
+</html>

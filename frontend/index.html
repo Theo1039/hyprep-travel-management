@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Travel Manager — Login</title>
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <h2 style="margin-top:0;">&#9992; Travel Management System</h2>
+    <p class="page-sub" style="margin-bottom:20px;">Group 6 &mdash; Hyprep Fullstack Project</p>
+
+    <div class="auth-tabs">
+      <button id="tabLoginBtn" class="active" onclick="switchTab('login')">Log In</button>
+      <button id="tabSignupBtn" onclick="switchTab('signup')">Sign Up</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <form id="loginForm" class="auth-form active">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="login_email" required />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login_password" required />
+      </div>
+      <div id="login_message"></div>
+      <button type="submit" class="btn">Log In</button>
+    </form>
+
+    <!-- SIGNUP FORM -->
+    <form id="signupForm" class="auth-form">
+      <div class="field">
+        <label>Full Name</label>
+        <input type="text" id="full_name" required />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" required />
+      </div>
+      <div class="field">
+        <label>Password (min 6 characters)</label>
+        <input type="password" id="password" minlength="6" required />
+      </div>
+      <div class="field">
+        <label>Account Type</label>
+        <select id="role">
+          <option value="customer">Customer (book trips)</option>
+          <option value="admin">Admin / Travel Agent</option>
+        </select>
+      </div>
+      <div id="message"></div>
+      <button type="submit" class="btn">Create Account</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="config.js"></script>
+<script src="js/supabaseClient.js"></script>
+<script>
+function switchTab(tab) {
+  document.getElementById('loginForm').classList.toggle('active', tab === 'login');
+  document.getElementById('signupForm').classList.toggle('active', tab === 'signup');
+  document.getElementById('tabLoginBtn').classList.toggle('active', tab === 'login');
+  document.getElementById('tabSignupBtn').classList.toggle('active', tab === 'signup');
+}
+
+document.getElementById('signupForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const full_name = document.getElementById('full_name').value;
+  const email = document.getElementById('email').value;
+  const password = document.getElementById('password').value;
+  const role = document.getElementById('role').value;
+  const msg = document.getElementById('message');
+
+  const { error } = await supabaseClient.auth.signUp({
+    email, password,
+    options: { data: { full_name, role } }
+  });
+
+  if (error) { msg.textContent = error.message; msg.className = 'message error'; return; }
+  msg.textContent = 'Account created! If email confirmation is enabled, check your inbox, then log in.';
+  msg.className = 'message success';
+});
+
+document.getElementById('loginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const email = document.getElementById('login_email').value;
+  const password = document.getElementById('login_password').value;
+  const msg = document.getElementById('login_message');
+
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+  if (error) { msg.textContent = error.message; msg.className = 'message error'; return; }
+  window.location.href = 'packages.html';
+});
+
+// If already logged in, skip straight to packages
+(async () => {
+  const { data } = await supabaseClient.auth.getSession();
+  if (data.session) window.location.href = 'packages.html';
+})();
+</script>
+</body>
+</html>
