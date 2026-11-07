@@ -1,77 +1,97 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Manage Packages — Travel Manager</title>
-<link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Manage Packages — Travel Manager</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
 
-<div id="nav"></div>
+  <div id="nav"></div>
 
-<div class="container">
-  <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-    <div>
-      <h1 class="page-title">Manage Packages</h1>
-      <p class="page-sub">Admin only &mdash; create, edit, or remove travel packages.</p>
+  <div class="container">
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+      <div>
+        <h1 class="page-title">Manage Packages</h1>
+        <p class="page-sub">Admin only &mdash; create, edit, or remove travel packages.</p>
+      </div>
+      <button class="btn" onclick="openModal()">+ Add Package</button>
     </div>
-    <button class="btn" onclick="openModal()">+ Add Package</button>
-  </div>
 
-  <div id="accessDenied" style="display:none;" class="message error">You do not have access to this page.</div>
-  <div id="errorBox"></div>
+    <div id="accessDenied" style="display:none;" class="message error">You do not have access to this page.</div>
+    <div id="errorBox"></div>
 
-  <div class="table-wrap" id="tableWrap">
-    <table>
-      <thead>
-        <tr><th>Name</th><th>Destination</th><th>Price</th><th>Days</th><th>Active</th><th>Actions</th></tr>
-      </thead>
-      <tbody id="packagesBody"><tr><td colspan="6">Loading...</td></tr></tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Add/Edit Modal -->
-<div class="modal-backdrop" id="modalBackdrop">
-  <div class="modal">
-    <div class="modal-head">
-      <h3 id="modalTitle" style="margin:0;">Add Package</h3>
-      <button class="btn secondary" onclick="closeModal()">&times;</button>
+    <div class="table-wrap" id="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Destination</th>
+            <th>Price</th>
+            <th>Days</th>
+            <th>Active</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="packagesBody">
+          <tr>
+            <td colspan="6">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-    <form id="packageForm">
-      <input type="hidden" id="package_id" />
-      <div class="field"><label>Name</label><input type="text" id="name" required /></div>
-      <div class="field"><label>Destination</label><input type="text" id="destination" required /></div>
-      <div class="field"><label>Description</label><textarea id="description"></textarea></div>
-      <div class="field"><label>Price (USD)</label><input type="number" id="price" min="1" required /></div>
-      <div class="field"><label>Duration (days)</label><input type="number" id="duration_days" min="1" required /></div>
-      <div class="field"><label>Cover Image (optional, max 2MB)</label><input type="file" id="imageFile" accept=".jpg,.jpeg,.png" /></div>
-      <div class="field"><label><input type="checkbox" id="is_active" style="width:auto;" checked /> Active (visible to customers)</label></div>
-      <div id="formMessage"></div>
-      <button type="submit" class="btn" style="margin-top:10px;width:100%;" id="saveBtn">Save Package</button>
-    </form>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="config.js"></script>
-<script src="js/supabaseClient.js"></script>
-<script src="js/common.js"></script>
-<script>
-let session = null;
-let allPackages = [];
+  <!-- Add/Edit Modal -->
+  <div class="modal-backdrop" id="modalBackdrop">
+    <div class="modal">
+      <div class="modal-head">
+        <h3 id="modalTitle" style="margin:0;">Add Package</h3>
+        <button class="btn secondary" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="packageForm">
+        <input type="hidden" id="package_id" />
+        <div class="field"><label>Name</label><input type="text" id="name" required /></div>
+        <div class="field"><label>Destination</label><input type="text" id="destination" required /></div>
+        <div class="field"><label>Description</label><textarea id="description"></textarea></div>
+        <div class="field"><label>Price (USD)</label><input type="number" id="price" min="1" required /></div>
+        <div class="field"><label>Duration (days)</label><input type="number" id="duration_days" min="1" required />
+        </div>
+        <div class="field"><label>Cover Image (optional, max 2MB)</label><input type="file" id="imageFile"
+            accept=".jpg,.jpeg,.png" /></div>
+        <div class="field"><label><input type="checkbox" id="is_active" style="width:auto;" checked /> Active (visible
+            to customers)</label></div>
+        <div id="formMessage"></div>
+        <button type="submit" class="btn" style="margin-top:10px;width:100%;" id="saveBtn">Save Package</button>
+      </form>
+    </div>
+  </div>
 
-async function loadPackages() {
-  const body = document.getElementById('packagesBody');
-  try {
-    const { packages } = await apiFetch('/packages', session);
-    allPackages = packages;
-    if (!packages.length) {
-      body.innerHTML = '<tr><td colspan="6">No packages yet. Click "+ Add Package" to create one.</td></tr>';
-      return;
-    }
-    body.innerHTML = packages.map(p => `
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/common.js"></script>
+
+  <script>
+    let session = null;
+    let allPackages = [];
+
+    async function loadPackages() {
+      const body = document.getElementById('packagesBody');
+
+      try {
+        const { packages } = await apiFetch('/packages', session);
+        allPackages = packages;
+
+        if (!packages.length) {
+          body.innerHTML = '<tr><td colspan="6">No packages yet. Click "+ Add Package" to create one.</td></tr>';
+          return;
+        }
+
+        body.innerHTML = packages.map(p => `
       <tr>
         <td>${p.name}</td>
         <td>${p.destination}</td>
@@ -84,103 +104,137 @@ async function loadPackages() {
         </td>
       </tr>
     `).join('');
-  } catch (err) {
-    showMessage(document.getElementById('errorBox'), err.message);
-  }
-}
 
-function openModal() {
-  document.getElementById('modalTitle').textContent = 'Add Package';
-  document.getElementById('packageForm').reset();
-  document.getElementById('package_id').value = '';
-  document.getElementById('modalBackdrop').classList.add('open');
-}
-function closeModal() {
-  document.getElementById('modalBackdrop').classList.remove('open');
-  document.getElementById('formMessage').innerHTML = '';
-}
-
-function editPackage(id) {
-  const p = allPackages.find(x => x.id === id);
-  if (!p) return;
-  document.getElementById('modalTitle').textContent = 'Edit Package';
-  document.getElementById('package_id').value = p.id;
-  document.getElementById('name').value = p.name;
-  document.getElementById('destination').value = p.destination;
-  document.getElementById('description').value = p.description || '';
-  document.getElementById('price').value = p.price;
-  document.getElementById('duration_days').value = p.duration_days;
-  document.getElementById('is_active').checked = p.is_active;
-  document.getElementById('modalBackdrop').classList.add('open');
-}
-
-async function deletePackage(id) {
-  if (!confirm('Delete this package? This cannot be undone.')) return;
-  try {
-    await apiFetch(`/packages/${id}`, session, { method: 'DELETE' });
-    loadPackages();
-  } catch (err) {
-    alert(err.message);
-  }
-}
-
-document.getElementById('packageForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const msg = document.getElementById('formMessage');
-  const saveBtn = document.getElementById('saveBtn');
-  saveBtn.disabled = true;
-  saveBtn.textContent = 'Saving...';
-
-  try {
-    let image_url;
-    const fileInput = document.getElementById('imageFile');
-    if (fileInput.files[0]) {
-      if (fileInput.files[0].size > 2 * 1024 * 1024) throw new Error('Image must be 2MB or smaller');
-      const result = await uploadFile(fileInput.files[0], session);
-      image_url = result.url;
+      } catch (err) {
+        showMessage(document.getElementById('errorBox'), err.message);
+      }
     }
 
-    const id = document.getElementById('package_id').value;
-    const payload = {
-      name: document.getElementById('name').value,
-      destination: document.getElementById('destination').value,
-      description: document.getElementById('description').value,
-      price: document.getElementById('price').value,
-      duration_days: document.getElementById('duration_days').value,
-      is_active: document.getElementById('is_active').checked,
-      ...(image_url ? { image_url } : {})
-    };
-
-    if (id) {
-      await apiFetch(`/packages/${id}`, session, { method: 'PUT', body: JSON.stringify(payload) });
-    } else {
-      await apiFetch('/packages', session, { method: 'POST', body: JSON.stringify(payload) });
+    function openModal() {
+      document.getElementById('modalTitle').textContent = 'Add Package';
+      document.getElementById('packageForm').reset();
+      document.getElementById('package_id').value = '';
+      document.getElementById('modalBackdrop').classList.add('open');
     }
 
-    closeModal();
-    loadPackages();
-  } catch (err) {
-    showMessage(msg, err.message);
-  } finally {
-    saveBtn.disabled = false;
-    saveBtn.textContent = 'Save Package';
-  }
-});
+    function closeModal() {
+      document.getElementById('modalBackdrop').classList.remove('open');
+      document.getElementById('formMessage').innerHTML = '';
+    }
 
-(async () => {
-  const result = await renderNav('admin');
-  if (!result) return;
-  session = result.session;
+    function editPackage(id) {
+      const p = allPackages.find(x => x.id === id);
 
-  if (result.profile?.role !== 'admin') {
-    document.getElementById('accessDenied').style.display = 'block';
-    document.getElementById('tableWrap').style.display = 'none';
-    document.querySelector('.container button.btn').style.display = 'none';
-    return;
-  }
+      if (!p) return;
 
-  loadPackages();
-})();
-</script>
+      document.getElementById('modalTitle').textContent = 'Edit Package';
+      document.getElementById('package_id').value = p.id;
+      document.getElementById('name').value = p.name;
+      document.getElementById('destination').value = p.destination;
+      document.getElementById('description').value = p.description || '';
+      document.getElementById('price').value = p.price;
+      document.getElementById('duration_days').value = p.duration_days;
+      document.getElementById('is_active').checked = p.is_active;
+
+      document.getElementById('modalBackdrop').classList.add('open');
+    }
+
+    async function deletePackage(id) {
+      if (!confirm('Delete this package? This cannot be undone.')) return;
+
+      try {
+        await apiFetch(`/packages/${id}`, session, {
+          method: 'DELETE'
+        });
+
+        loadPackages();
+
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    // Save or update a package.
+    document.getElementById('packageForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const msg = document.getElementById('formMessage');
+      const saveBtn = document.getElementById('saveBtn');
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      try {
+        let image_url;
+
+        const fileInput = document.getElementById('imageFile');
+
+        if (fileInput.files[0]) {
+          if (fileInput.files[0].size > 2 * 1024 * 1024) {
+            throw new Error('Image must be 2MB or smaller');
+          }
+
+          // Upload using the administrator-only package image endpoint.
+          const result = await uploadPackageImage(fileInput.files[0], session);
+
+          image_url = result.url;
+        }
+
+        const id = document.getElementById('package_id').value;
+
+        const payload = {
+          name: document.getElementById('name').value,
+          destination: document.getElementById('destination').value,
+          description: document.getElementById('description').value,
+          price: document.getElementById('price').value,
+          duration_days: document.getElementById('duration_days').value,
+          is_active: document.getElementById('is_active').checked,
+          ...(image_url ? { image_url } : {})
+        };
+
+        if (id) {
+          await apiFetch(`/packages/${id}`, session, {
+            method: 'PUT',
+            body: JSON.stringify(payload)
+          });
+        } else {
+          await apiFetch('/packages', session, {
+            method: 'POST',
+            body: JSON.stringify(payload)
+          });
+        }
+
+        closeModal();
+        loadPackages();
+
+      } catch (err) {
+        showMessage(msg, err.message);
+
+      } finally {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Package';
+      }
+    });
+
+    // Initialize the page.
+    (async () => {
+      const result = await renderNav('admin');
+
+      if (!result) return;
+
+      session = result.session;
+
+      if (result.profile?.role !== 'admin') {
+        document.getElementById('accessDenied').style.display = 'block';
+        document.getElementById('tableWrap').style.display = 'none';
+        document.querySelector('.container button.btn').style.display = 'none';
+        return;
+      }
+
+      loadPackages();
+    })();
+  </script>
+
 </body>
+
 </html>

@@ -1,126 +1,299 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>My Bookings — Travel Manager</title>
-<link rel="stylesheet" href="css/style.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My Bookings — Travel Manager</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
+
 <body>
 
-<div id="nav"></div>
+  <div id="nav"></div>
 
-<div class="container">
-  <h1 class="page-title" id="pageHeading">Bookings</h1>
-  <p class="page-sub" id="pageSub">Manage your trip bookings.</p>
+  <div class="container">
+    <h1 class="page-title" id="pageHeading">Bookings</h1>
+    <p class="page-sub" id="pageSub">Manage your trip bookings.</p>
 
-  <div id="errorBox"></div>
-  <div class="table-wrap">
-    <table>
-      <thead>
-        <tr>
-          <th>Package</th>
-          <th>Traveler</th>
-          <th>Travelers</th>
-          <th>Travel Date</th>
-          <th>Total</th>
-          <th>Status</th>
-          <th>Actions</th>
-        </tr>
-      </thead>
-      <tbody id="bookingsBody">
-        <tr><td colspan="7">Loading...</td></tr>
-      </tbody>
-    </table>
+    <div id="errorBox"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Package</th>
+            <th>Traveler</th>
+            <th>Travelers</th>
+            <th>Travel Date</th>
+            <th>Total</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+
+        <tbody id="bookingsBody">
+          <tr>
+            <td colspan="7">Loading...</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="config.js"></script>
-<script src="js/supabaseClient.js"></script>
-<script src="js/common.js"></script>
-<script>
-let session = null;
-let isAdmin = false;
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="config.js"></script>
+  <script src="js/supabaseClient.js"></script>
+  <script src="js/common.js"></script>
 
-async function loadBookings() {
-  const body = document.getElementById('bookingsBody');
-  const errorBox = document.getElementById('errorBox');
-  try {
-    const { bookings } = await apiFetch('/bookings', session);
-    if (!bookings.length) {
-      body.innerHTML = '<tr><td colspan="7">No bookings yet.</td></tr>';
-      return;
+  <script>
+
+    let session = null;
+    let isAdmin = false;
+
+
+    // Prevent database text from being interpreted as HTML.
+    function escapeHTML(value) {
+      return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      })[character]);
     }
-    body.innerHTML = bookings.map(b => `
+
+
+    // Load bookings from the backend.
+    async function loadBookings() {
+
+      const body = document.getElementById('bookingsBody');
+      const errorBox = document.getElementById('errorBox');
+
+      try {
+
+        const { bookings } = await apiFetch('/bookings', session);
+
+        if (!bookings.length) {
+          body.innerHTML = '<tr><td colspan="7">No bookings yet.</td></tr>';
+          return;
+        }
+
+        body.innerHTML = bookings.map(b => `
+
       <tr>
-        <td>${b.packages?.name || '—'}<br><span style="color:#5b6477;font-size:.8rem;">${b.packages?.destination || ''}</span></td>
-        <td>${b.traveler_name}</td>
-        <td>${b.number_of_travelers}</td>
-        <td>${b.travel_date}</td>
-        <td>$${Number(b.total_price).toLocaleString()}</td>
-        <td><span class="badge ${b.status}">${b.status}</span></td>
-        <td class="row-actions">
-          ${isAdmin ? `
-            <select onchange="updateStatus('${b.id}', this.value)">
-              <option value="">Change status</option>
-              <option value="pending" ${b.status==='pending'?'selected':''}>Pending</option>
-              <option value="confirmed" ${b.status==='confirmed'?'selected':''}>Confirmed</option>
-              <option value="cancelled" ${b.status==='cancelled'?'selected':''}>Cancelled</option>
-            </select>
-          ` : `
-            ${b.status !== 'cancelled' ? `<button class="btn secondary" onclick="cancelBooking('${b.id}')">Cancel</button>` : ''}
-          `}
-          <button class="btn danger" onclick="deleteBooking('${b.id}')">Delete</button>
+
+        <td>
+          ${escapeHTML(b.packages?.name || '—')}
+          <br>
+          <span style="color:#5b6477;font-size:.8rem;">
+            ${escapeHTML(b.packages?.destination || '')}
+          </span>
         </td>
+
+        <td>${escapeHTML(b.traveler_name)}</td>
+
+        <td>${escapeHTML(b.number_of_travelers)}</td>
+
+        <td>${escapeHTML(b.travel_date)}</td>
+
+        <td>$${Number(b.total_price).toLocaleString()}</td>
+
+        <td>
+          <span class="badge ${escapeHTML(b.status)}">
+            ${escapeHTML(b.status)}
+          </span>
+        </td>
+
+        <td class="row-actions">
+
+          ${b.payment_proof_path ? `
+            <button
+              class="btn secondary"
+              onclick="viewPaymentProof('${b.id}')">
+              View Proof
+            </button>
+          ` : ''}
+
+          ${isAdmin ? `
+
+            <select onchange="updateStatus('${b.id}', this.value)">
+
+              <option value="">Change status</option>
+
+              <option value="pending" ${b.status === 'pending' ? 'selected' : ''}>
+                Pending
+              </option>
+
+              <option value="confirmed" ${b.status === 'confirmed' ? 'selected' : ''}>
+                Confirmed
+              </option>
+
+              <option value="cancelled" ${b.status === 'cancelled' ? 'selected' : ''}>
+                Cancelled
+              </option>
+
+            </select>
+
+          ` : `
+
+            ${b.status !== 'cancelled' ? `
+              <button
+                class="btn secondary"
+                onclick="cancelBooking('${b.id}')">
+                Cancel
+              </button>
+            ` : ''}
+
+          `}
+
+          <button
+            class="btn danger"
+            onclick="deleteBooking('${b.id}')">
+            Delete
+          </button>
+
+        </td>
+
       </tr>
+
     `).join('');
-  } catch (err) {
-    showMessage(errorBox, err.message);
-  }
-}
 
-async function updateStatus(id, status) {
-  if (!status) return;
-  try {
-    await apiFetch(`/bookings/${id}`, session, { method: 'PUT', body: JSON.stringify({ status }) });
-    loadBookings();
-  } catch (err) {
-    alert(err.message);
-  }
-}
+      } catch (err) {
 
-async function cancelBooking(id) {
-  if (!confirm('Cancel this booking?')) return;
-  try {
-    await apiFetch(`/bookings/${id}`, session, { method: 'PUT', body: JSON.stringify({ status: 'cancelled' }) });
-    loadBookings();
-  } catch (err) {
-    alert(err.message);
-  }
-}
+        showMessage(errorBox, err.message);
 
-async function deleteBooking(id) {
-  if (!confirm('Permanently delete this booking?')) return;
-  try {
-    await apiFetch(`/bookings/${id}`, session, { method: 'DELETE' });
-    loadBookings();
-  } catch (err) {
-    alert(err.message);
-  }
-}
+      }
+    }
 
-(async () => {
-  const result = await renderNav('bookings');
-  if (!result) return;
-  session = result.session;
-  isAdmin = result.profile?.role === 'admin';
-  document.getElementById('pageHeading').textContent = isAdmin ? 'All Bookings' : 'My Bookings';
-  document.getElementById('pageSub').textContent = isAdmin
-    ? 'View and update the status of every customer booking.'
-    : 'Track, edit, or cancel your trip bookings.';
-  loadBookings();
-})();
-</script>
+
+    // View a private payment document.
+    async function viewPaymentProof(id) {
+
+      // Open a blank tab immediately to avoid popup blocking.
+      const proofWindow = window.open('about:blank', '_blank');
+
+      if (!proofWindow) {
+        alert('Please allow pop-ups for this website to view payment proof.');
+        return;
+      }
+
+      proofWindow.opener = null;
+      proofWindow.document.body.textContent = 'Loading payment document...';
+
+      try {
+
+        // Request a temporary signed URL from the backend.
+        const result = await apiFetch(
+          `/bookings/${id}/payment-proof`,
+          session
+        );
+
+        // Open the private document.
+        proofWindow.location.href = result.url;
+
+      } catch (err) {
+
+        proofWindow.close();
+        alert(err.message);
+
+      }
+
+    }
+
+
+    // Update booking status (admin only).
+    async function updateStatus(id, status) {
+
+      if (!status) return;
+
+      try {
+
+        await apiFetch(`/bookings/${id}`, session, {
+          method: 'PUT',
+          body: JSON.stringify({ status })
+        });
+
+        loadBookings();
+
+      } catch (err) {
+
+        alert(err.message);
+
+      }
+
+    }
+
+
+    // Cancel a booking.
+    async function cancelBooking(id) {
+
+      if (!confirm('Cancel this booking?')) return;
+
+      try {
+
+        await apiFetch(`/bookings/${id}`, session, {
+          method: 'PUT',
+          body: JSON.stringify({ status: 'cancelled' })
+        });
+
+        loadBookings();
+
+      } catch (err) {
+
+        alert(err.message);
+
+      }
+
+    }
+
+
+    // Delete a booking.
+    async function deleteBooking(id) {
+
+      if (!confirm('Permanently delete this booking?')) return;
+
+      try {
+
+        await apiFetch(`/bookings/${id}`, session, {
+          method: 'DELETE'
+        });
+
+        loadBookings();
+
+      } catch (err) {
+
+        alert(err.message);
+
+      }
+
+    }
+
+
+    // Initialize the page.
+    (async () => {
+
+      const result = await renderNav('bookings');
+
+      if (!result) return;
+
+      session = result.session;
+
+      isAdmin = result.profile?.role === 'admin';
+
+      document.getElementById('pageHeading').textContent =
+        isAdmin ? 'All Bookings' : 'My Bookings';
+
+      document.getElementById('pageSub').textContent = isAdmin
+        ? 'View and update the status of every customer booking.'
+        : 'Track, edit, or cancel your trip bookings.';
+
+      loadBookings();
+
+    })();
+
+  </script>
+
 </body>
+
 </html>
